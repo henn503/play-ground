@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>구름 위 쉼터</title>
+<meta name="description" content="친구들과 함께 걷고, 이야기하고, 흔적을 남기는 구름 위 3D 쉼터">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Gowun+Batang:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="scene"></div>
+
+<div class="loading" id="loading"><div class="cloudy">☁️</div><h1>구름 위 쉼터</h1><p>구름 위로 올라가는 중…</p></div>
+<div class="nowebgl" id="nowebgl"><div><h2>3D를 표시할 수 없어요</h2><p>이 브라우저나 기기에서 WebGL을 쓸 수 없어요. 다른 브라우저로 열어 주세요.</p></div></div>
+
+<div class="top">
+  <div class="spacer"></div>
+  <div class="online glass" title="지금 접속한 사람"><span class="dot" id="dot"></span><span id="onlineTxt">…</span></div>
+  <button class="mebtn glass" id="meBtn"><i id="meSw"></i><span id="meName">나</span></button>
+</div>
+
+<div class="chat" id="chat">
+  <div class="log" id="log"></div>
+  <form id="chatForm" autocomplete="off"><input id="chatInput" maxlength="100" placeholder="Enter로 대화하기"><button class="btn primary" type="submit">보내기</button></form>
+</div>
+
+<div class="emotes glass" id="emotes"></div>
+<div class="prompt glass" id="prompt"><span id="promptTxt"></span><button class="btn primary" id="promptBtn">열기<kbd>E</kbd></button></div>
+<div class="help glass">이동 WASD·방향키 / 바닥 클릭 · 시점 드래그 · 확대 휠<br>점프 Space · 앉기·숭배 X · 대화 Enter</div>
+
+<!-- 방명록 -->
+<div class="modal-bg" id="gbModal"><div class="panel">
+  <button class="close" data-close>✕</button>
+  <h2>📖 구름 방명록</h2>
+  <div class="sub">이곳에 다녀간 흔적을 남겨 주세요. 방명록은 사라지지 않고 계속 남아요.</div>
+  <form id="gbForm">
+    <textarea class="field" id="gbText" maxlength="200" placeholder="한마디 남기기 (최대 200자)"></textarea>
+    <div class="row" style="margin-top:8px"><span class="note-line" id="gbNote" style="flex:1"></span><button class="btn primary" id="gbSubmit" type="submit">남기기</button></div>
+  </form>
+  <div class="gb-list" id="gbList"><div class="empty">불러오는 중…</div></div>
+</div></div>
+
+<!-- 그뤠잇·스튜핏 판정소 -->
+<div class="modal-bg" id="gsModal"><div class="panel wide">
+  <button class="close" data-close>✕</button>
+  <h2>⚖️ 그뤠잇·스튜핏 판정소</h2>
+  <div class="sub">살까 말까 고민되는 물건을 올리면, 친구들이 <b style="color:var(--great)">그뤠잇!</b> 또는 <b style="color:var(--stupid)">스튜핏!</b>으로 판정해 줘요.</div>
+  <div class="gs-top">
+    <form class="upload" id="gsForm">
+      <label class="drop" id="drop"><input type="file" id="gsFile" accept="image/*" hidden><span id="dropTxt">📷 물건 사진 고르기<br><small>탭하거나 사진을 끌어다 놓으세요</small></span></label>
+      <input class="field" id="gsTitle" maxlength="30" placeholder="물건 이름 (예: 무선 이어폰)">
+      <input class="field" id="gsPrice" maxlength="20" placeholder="가격 (예: 189,000원)">
+      <textarea class="field" id="gsNote" maxlength="120" placeholder="고민 한마디 (예: 지금 것도 멀쩡한데… 노이즈캔슬링이 너무 탐나요)"></textarea>
+      <div class="row"><span class="note-line" id="gsMsg" style="flex:1"></span><button class="btn primary" id="gsSubmit" type="submit">판정 받기</button></div>
+    </form>
+    <div class="rules">
+      <b>판정 방법</b><br>
+      · 사고 싶은 물건, 산 걸 후회할까 걱정되는 물건을 올려요.<br>
+      · 친구들이 한 번씩 <b class="g">그뤠잇</b>(사도 된다) / <b class="s">스튜핏</b>(참아라)을 눌러요. 다시 누르면 취소돼요.<br>
+      · 2표 이상 모이면 도장이 찍혀요: 그뤠잇 60% 이상 → <b class="g">그뤠잇!</b>, 40% 이하 → <b class="s">스튜핏!</b>, 그 사이 → 팽팽<br>
+      · 물건마다 <b>익명 코멘트</b>를 달 수 있어요. 누가 썼는지는 아무에게도 보이지 않아요.<br>
+      · 최근 물건 6개는 광장 판정소 게시판에도 걸려요.
+    </div>
+  </div>
+  <div class="gs-grid" id="gsGrid"><div class="empty">불러오는 중…</div></div>
+</div></div>
+
+<!-- 꾸미기 -->
+<div class="modal-bg" id="meModal"><div class="panel">
+  <button class="close" data-close>✕</button>
+  <h2>내 모습 꾸미기</h2>
+  <div class="sub">친구들에게 보이는 내 천사 모습이에요.</div>
+  <label class="l">닉네임</label>
+  <input class="field" id="nickInput" maxlength="12" style="margin:8px 0 16px">
+  <div class="preview3d" id="mePreviewSlot"></div>
+  <label class="l">머리 스타일</label>
+  <div class="hats hairs" id="meHairs"></div>
+  <label class="l">머리 색</label>
+  <div class="swatches" id="meHairColors"></div>
+  <label class="l">옷 색깔</label>
+  <div class="swatches" id="swatches"></div>
+  <label class="l">머리 장식</label>
+  <div class="hats" id="hats"></div>
+  <button class="btn primary" id="meSave" style="width:100%">저장</button>
+</div></div>
+
+<!-- 입장 -->
+<div class="modal-bg entry" id="entryModal"><div class="panel">
+  <h2>☁️ 구름 위 쉼터에 오신 걸 환영해요</h2>
+  <div class="sub">친구들에게 보일 이름과 모습을 정하고 들어가요. 나중에 오른쪽 위 버튼에서 언제든 바꿀 수 있어요.</div>
+  <label class="l">닉네임</label>
+  <input class="field" id="entryNick" maxlength="12" placeholder="예: 구름이" style="margin:8px 0 16px">
+  <div class="preview3d" id="entryPreviewSlot"></div>
+  <label class="l">머리 스타일</label>
+  <div class="hats hairs" id="entryHairs"></div>
+  <label class="l">머리 색</label>
+  <div class="swatches" id="entryHairColors"></div>
+  <label class="l">옷 색깔</label>
+  <div class="swatches" id="entrySwatches"></div>
+  <label class="l">머리 장식</label>
+  <div class="hats" id="entryHats"></div>
+  <div class="row"><span class="note-line" id="entryMsg" style="flex:1"></span><button class="btn primary" id="entryGo">입장하기</button></div>
+</div></div>
+<div class="banner" id="banner"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
