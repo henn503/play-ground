@@ -178,7 +178,7 @@ export function createWorld(container){
       const c = document.createElement('canvas'); c.width = 320; c.height = 260;
       const tex = new THREE.CanvasTexture(c);
       const m = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.275), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
-      m.position.set(-3.1 + (i % 3) * 3.1, 4.55 - Math.floor(i / 3) * 2.55, 0.19); board.add(m);
+      m.position.set(-3.1 + (i % 3) * 3.1, 5.0 - Math.floor(i / 3) * 2.5, 0.19); board.add(m);   // 제목 바로 아래로 붙임
       boardFrames.push({ c, tex, key: null });
     }
     const lbl = makeSprite(textCanvas(['⚖️ 판정소 · 사진 올리고 판정 받기'], { font: 30 }), 0.7); lbl.position.y = 8.6; board.add(lbl);
