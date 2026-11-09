@@ -239,7 +239,20 @@ function collide(x, z){
   return [x, z];
 }
 function arrive(){ target = null; marker.visible = false; if (pendingZone) { const z = pendingZone; pendingZone = null; openZone(z); } }
-function frame(){
+// 움직일 때는 초당 30번, 아무도 안 움직이고 가만히 있을 때는 초당 12번만 다시 그려요
+const FRAME_MS = 1000 / 30, IDLE_MS = 1000 / 12;
+let lastDraw = 0, lastActive = 0;
+const wake = () => { lastActive = performance.now(); };
+for (const ev of ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchmove']) addEventListener(ev, wake, { passive: true });
+function busy(){
+  if (ME.moving || ME.y > 0 || target || performance.now() - lastActive < 1500) return true;
+  for (const r of remotes.values()) if (r.mv || Math.abs(r.tx - r.x) + Math.abs(r.tz - r.z) > 0.02) return true;
+  return false;
+}
+function frame(now){
+  requestAnimationFrame(frame);
+  if (document.hidden || now - lastDraw < (busy() ? FRAME_MS : IDLE_MS) - 2) return;
+  lastDraw = now;
   const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
   let ix = 0, iz = 0;
   if (!anyModal() && !typing()) { if (keys.f) iz += 1; if (keys.b) iz -= 1; if (keys.l) ix -= 1; if (keys.r) ix += 1; }
@@ -286,7 +299,6 @@ function frame(){
   marker.scale.setScalar(1 + Math.sin(t * 6) * 0.12);
   renderer.render(scene, camera);
   if (firstFrame) { firstFrame = false; setTimeout(() => $('loading').classList.add('hide'), 300); }
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
@@ -610,7 +622,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {
 const PV = (() => {
   let r = null;
   try { r = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { return null; }
-  r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); r.setSize(190, 190);
+  r.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); r.setSize(190, 190);
   r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.25;
   const sc = new THREE.Scene();
   sc.add(new THREE.HemisphereLight(0xf2f4ff, 0xe0bfd8, 0.85));

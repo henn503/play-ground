@@ -6,7 +6,7 @@ const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 
 export async function createNet(config, onStatus = () => {}){
   // claude.ai 아티팩트 안에서 열렸을 때: Claude의 내장 실시간·저장 기능 사용
-  if (!config && window.claude && typeof window.claude.use === 'function') {
+  if (window.claude && typeof window.claude.use === 'function') {
     try { const a = await artifactNet(onStatus); if (a) return a; } catch (e) { console.warn('[cloud-heaven] artifact 연결 실패', e); }
   }
   if (!config) { onStatus('solo'); return soloNet('config'); }

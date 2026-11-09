@@ -14,7 +14,8 @@ export function buildHeartFigure(){
   const WHITE = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const BLUSH = new THREE.MeshBasicMaterial({ color: 0xffa2b4, transparent: true, opacity: 0.5, depthWrite: false });
   const MOUTH = new THREE.MeshBasicMaterial({ color: 0xd9707f });
-  const sph = new THREE.SphereGeometry(1, 28, 20);
+  const sph = new THREE.SphereGeometry(1, 24, 16);
+  const beadGeo = new THREE.SphereGeometry(1, 12, 8);   // 머리카락 구슬은 수백 개라 단순하게
   const ball = (m, x, y, z, sx, sy = sx, sz = sx) => { const o = new THREE.Mesh(sph, m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o; };
   // 두 점 사이를 잇는 원기둥 (팔)
   const limb = (m, a, b, r1, r2) => {
@@ -126,7 +127,7 @@ export function buildHeartFigure(){
   // 목덜미 (뒤에서만 보여요)
   for (const s of [-1, 0, 1]) lock([[s * 0.22, -0.02, -0.52], [s * 0.23, -0.16, -0.5], [s * 0.18, -0.25, -0.44]], 0.14, 0.09, 1);
 
-  const im = new THREE.InstancedMesh(sph, new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x1a1220, emissiveIntensity: 0.4 }), beads.length);
+  const im = new THREE.InstancedMesh(beadGeo, new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x1a1220, emissiveIntensity: 0.4 }), beads.length);
   const o3 = new THREE.Object3D(), c0 = new THREE.Color(0x2f2533), c1 = new THREE.Color(0x3a2e40);
   beads.forEach((b, i) => { o3.position.copy(b.p); o3.scale.setScalar(b.r); o3.updateMatrix(); im.setMatrixAt(i, o3.matrix); im.setColorAt(i, b.shade ? c1 : c0); });
   im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;

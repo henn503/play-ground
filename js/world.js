@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { glowTexture, textCanvas, makeSprite } from './sprites.js';
 
 export function createWorld(container){
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'low-power' });   // 가장자리 다듬기 끄고 절전 모드로
+  renderer.setPixelRatio(1);   // 해상도를 너무 높이지 않아 그래픽 부담을 줄여요
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.25;
   container.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
@@ -37,7 +37,7 @@ export function createWorld(container){
   // ======================================================================
   //  구름
   // ======================================================================
-  const puffGeo = new THREE.SphereGeometry(1, 18, 12);
+  const puffGeo = new THREE.SphereGeometry(1, 14, 10);
   const cloudMat = new THREE.MeshLambertMaterial({ color: 0xfdfbff, emissive: 0x4a3f55, emissiveIntensity: 0.3 });
   function puffs(list, mat){
     const m = new THREE.InstancedMesh(puffGeo, mat || cloudMat, list.length);
@@ -64,7 +64,7 @@ export function createWorld(container){
   const sea = new THREE.Group(); scene.add(sea);
   {
     const L = [];
-    for (let i = 0; i < 260; i++) { const a = rnd() * Math.PI * 2, r = 55 + rnd() * 240, s = 7 + rnd() * 14; L.push([Math.cos(a) * r, -26 - rnd() * 14, Math.sin(a) * r, s, s * 0.55, s]); }
+    for (let i = 0; i < 150; i++) { const a = rnd() * Math.PI * 2, r = 55 + rnd() * 240, s = 9 + rnd() * 16; L.push([Math.cos(a) * r, -26 - rnd() * 14, Math.sin(a) * r, s, s * 0.55, s]); }
     sea.add(puffs(L, new THREE.MeshLambertMaterial({ color: 0xf1e2f0, emissive: 0x3a2440, emissiveIntensity: 0.2 })));
   }
   // 떠다니는 작은 섬
@@ -90,12 +90,12 @@ export function createWorld(container){
   }
   // 빛기둥
   const rays = [];
-  for (const [x, z, h] of [[-24, -18, 0.1], [26, -22, -0.12], [0, 0, 0], [-30, 20, 0.08], [30, 24, -0.1]]) {
-    const m = new THREE.Mesh(new THREE.CylinderGeometry(1.5, x === 0 ? 4.5 : 6, 140, 28, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff6d5, transparent: true, opacity: 0.035, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+  for (const [x, z, h] of [[-24, -18, 0.1], [26, -22, -0.12], [0, 0, 0]]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(1.5, x === 0 ? 4.5 : 6, 140, 28, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff6d5, transparent: true, opacity: 0.035, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide, fog: false }));
     m.position.set(x, 70, z); m.rotation.z = h; scene.add(m); rays.push(m);
   }
   // 반짝이
-  const SPARK_N = 380;
+  const SPARK_N = 200;
   const sparkGeo = new THREE.BufferGeometry(), sparkPos = new Float32Array(SPARK_N * 3);
   for (let i = 0; i < SPARK_N; i++) { const a = rnd() * Math.PI * 2, r = rnd() * 60; sparkPos[i*3] = Math.cos(a) * r; sparkPos[i*3+1] = rnd() * 30; sparkPos[i*3+2] = Math.sin(a) * r; }
   sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
