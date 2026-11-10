@@ -17,7 +17,7 @@
         "t"
       ],
       "$id": {
-        ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid",
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('t').val() < now - 1800000))",
         ".validate": "newData.hasChildren(['uid', 'nick', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 100 && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now"
       }
     },
@@ -27,8 +27,32 @@
         "t"
       ],
       "$id": {
-        ".write": "auth != null && !data.exists() && newData.child('uid').val() === auth.uid",
-        ".validate": "newData.hasChildren(['uid', 'nick', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 200 && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now"
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['uid', 'nick', 'text', 't']) && newData.child('text').isString() && newData.child('text').val().length <= 200 && (newData.child('text').val().length > 0 || (newData.child('draw').val() === true && root.child('gbimages').child($id).exists())) && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now"
+      }
+    },
+    "gbimages": {
+      ".read": "auth != null",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['uid', 'data']) && newData.child('data').isString() && newData.child('data').val().beginsWith('data:image/') && newData.child('data').val().length < 160000"
+      }
+    },
+    "wishes": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "t"
+      ],
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['uid', 'nick', 'text', 'orn', 't']) && newData.child('text').isString() && newData.child('text').val().length <= 40 && (newData.child('text').val().length > 0 || (newData.child('draw').val() === true && root.child('wishimg').child($id).exists())) && newData.child('orn').isNumber() && newData.child('orn').val() >= 0 && newData.child('orn').val() <= 5 && newData.child('nick').isString() && newData.child('nick').val().length <= 12 && newData.child('t').val() === now"
+      }
+    },
+    "wishimg": {
+      ".read": "auth != null",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['uid', 'data']) && newData.child('data').isString() && newData.child('data').val().beginsWith('data:image/') && newData.child('data').val().length < 60000"
       }
     },
     "items": {

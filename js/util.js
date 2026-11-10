@@ -30,6 +30,8 @@ export const HAIRS = [
   { id: 'pony',  name: '묶은머리', ic: '🎀' }
 ];
 export const HAIR_COLORS = ['#3b2a26','#6b4226','#b07a4a','#e8c37a','#f2a7c3','#9db8f0','#d7d2e2'];
+// 대화는 30분이 지나면 화면과 서버에서 모두 지워져요
+export const CHAT_TTL = 30 * 60 * 1000;
 export const EMOTES = ['👋','😂','❤️','👏','🙏','✨','🤔'];
 
 // 이 창(탭)만의 아이디: 같은 사람이 창을 두 개 열어도 따로 보이게

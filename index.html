@@ -20,6 +20,7 @@
 
 <div class="top">
   <div class="spacer"></div>
+  <button class="sound glass" id="soundBtn" title="소리 끄기">🔊</button>
   <div class="online glass" title="지금 접속한 사람"><span class="dot" id="dot"></span><span id="onlineTxt">…</span></div>
   <button class="mebtn glass" id="meBtn"><i id="meSw"></i><span id="meName">나</span></button>
 </div>
@@ -30,19 +31,75 @@
 </div>
 
 <div class="emotes glass" id="emotes"></div>
-<div class="prompt glass" id="prompt"><span id="promptTxt"></span><button class="btn primary" id="promptBtn">열기<kbd>E</kbd></button></div>
-<div class="help glass">이동 WASD·방향키 / 바닥 클릭 · 시점 드래그 · 확대 휠<br>점프 Space · 앉기·숭배 X · 대화 Enter</div>
+<div class="prompt glass" id="prompt"><span id="promptTxt"></span><span class="pbtns" id="promptBtns"></span></div>
+<div class="help glass">이동 WASD·방향키 / 바닥 클릭 · 시점 드래그 · 확대 휠<br>점프 Space · 앉기·열기·타기 E · 숭배·던지기 X · 기타 G·베이스 B·드럼 R·건반 P · 대화 Enter</div>
 
 <!-- 방명록 -->
-<div class="modal-bg" id="gbModal"><div class="panel">
+<div class="modal-bg" id="wishModal"><div class="panel">
   <button class="close" data-close>✕</button>
-  <h2>📖 구름 방명록</h2>
-  <div class="sub">이곳에 다녀간 흔적을 남겨 주세요. 방명록은 사라지지 않고 계속 남아요.</div>
+  <h2>🎄 소원 트리</h2>
+  <div class="sub">오너먼트에 소원을 적어서 트리에 달아요. 최근 소원 24개가 트리에 달려요. 오너먼트를 누르면 크게 볼 수 있어요.</div>
+  <form id="wishForm">
+    <div class="wish-compose">
+      <div class="wish-padwrap">
+        <div class="wish-ball" id="wishBall"><canvas id="wishCanvas" width="200" height="200"></canvas></div>
+        <div class="wish-cap"></div>
+      </div>
+      <div class="wish-side">
+        <input class="field" id="wishText" maxlength="40" placeholder="소원을 적어 주세요 (최대 40자)" autocomplete="off">
+        <div class="row wish-pick"><span class="note-line">오너먼트 색</span><div class="wish-orns" id="wishOrns"></div></div>
+        <div class="row wish-pick"><span class="note-line">그리기</span><div class="gb-colors wish-pens" id="wishPens"></div></div>
+        <div class="row wish-pick">
+          <button class="btn ghost" id="wishThin" type="button">가늘게</button>
+          <button class="btn ghost" id="wishEraser" type="button">🧽 지우개</button>
+          <button class="btn ghost" id="wishClear" type="button">🗑️</button>
+        </div>
+        <div class="note-line">왼쪽 동그라미 안에 그림을 그릴 수 있어요 (글만 써도, 그림만 그려도 돼요)</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px"><span class="note-line" id="wishNote" style="flex:1"></span><button class="btn primary" id="wishSubmit" type="submit">달기 ✨</button></div>
+  </form>
+  <div class="wish-list" id="wishList"><div class="empty">불러오는 중…</div></div>
+</div></div>
+<div class="modal-bg" id="ornModal"><div class="panel orn-view">
+  <button class="close" data-close>✕</button>
+  <canvas id="ornBig" width="360" height="400"></canvas>
+  <div class="orn-text" id="ornText"></div>
+  <div class="orn-by" id="ornBy"></div>
+  <div class="row" style="justify-content:center;gap:8px;margin-top:12px">
+    <button class="btn ghost" id="ornPrev" type="button">◀</button>
+    <button class="btn ghost" id="ornDel" type="button" hidden>떼기</button>
+    <button class="btn ghost" id="ornNext" type="button">▶</button>
+  </div>
+</div></div>
+<div class="modal-bg" id="gbModal"><div class="panel wide">
+  <button class="close" data-close>✕</button>
+  <h2>📌 방명록 게시판</h2>
+  <div class="sub">글을 쓰거나, 그림을 그리거나, 사진에 낙서해서 게시판에 붙여 주세요. 최근 6장은 광장 게시판에도 꽂혀요.</div>
   <form id="gbForm">
-    <textarea class="field" id="gbText" maxlength="200" placeholder="한마디 남기기 (최대 200자)"></textarea>
-    <div class="row" style="margin-top:8px"><span class="note-line" id="gbNote" style="flex:1"></span><button class="btn primary" id="gbSubmit" type="submit">남기기</button></div>
+    <textarea class="field" id="gbText" maxlength="200" placeholder="한마디 남기기 (최대 200자, 그림·사진만 남겨도 돼요)"></textarea>
+    <div class="row gb-addrow">
+      <button class="btn ghost gb-drawtoggle" id="gbDrawToggle" type="button">🎨 그림도 그리기</button>
+      <button class="btn ghost gb-drawtoggle" id="gbPhotoBtn" type="button">📷 사진 넣기</button>
+      <input type="file" id="gbPhoto" accept="image/*" hidden>
+    </div>
+    <div class="gb-draw" id="gbDraw" hidden>
+      <canvas id="gbCanvas" width="400" height="400"></canvas>
+      <div class="gb-tools">
+        <div class="gb-colors" id="gbColors"></div>
+        <div class="gb-sizes" id="gbSizes"></div>
+        <button class="btn ghost on" id="gbPen" type="button" title="펜">✏️ 펜</button>
+        <button class="btn ghost" id="gbEraser" type="button" title="지우개 (사진은 안 지워져요)">🧽 지우개</button>
+        <button class="btn ghost" id="gbTextTool" type="button" title="글자 넣기">🔤 글자</button>
+        <button class="btn ghost" id="gbUndo" type="button" title="되돌리기">↩️</button>
+        <button class="btn ghost" id="gbClear" type="button" title="모두 지우기">🗑️</button>
+        <input class="field gb-textinput" id="gbStamp" maxlength="30" placeholder="쓸 글자를 적고 그림 위를 눌러요" hidden>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px"><span class="note-line" id="gbNote" style="flex:1"></span><button class="btn primary" id="gbSubmit" type="submit">붙이기</button></div>
   </form>
   <div class="gb-list" id="gbList"><div class="empty">불러오는 중…</div></div>
+</div></div>
 </div></div>
 
 <!-- 그뤠잇·스튜핏 판정소 -->

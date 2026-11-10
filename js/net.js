@@ -1,6 +1,6 @@
 // 여러 사람 연결: Firebase(익명 로그인 + Realtime Database)
 // firebaseConfig가 없거나 연결에 실패하면 같은 모양의 "혼자 모드"로 대신 동작해요.
-import { TAB_ID } from './util.js';
+import { TAB_ID, CHAT_TTL } from './util.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 
@@ -25,7 +25,7 @@ async function firebaseNet(cfg, onStatus){
   const [appM, authM, dbM] = await Promise.all([
     import(SDK + 'firebase-app.js'), import(SDK + 'firebase-auth.js'), import(SDK + 'firebase-database.js')
   ]);
-  const { ref, set, update, remove, push, onValue, query, orderByChild, limitToLast, onDisconnect, serverTimestamp, get, onChildAdded } = dbM;
+  const { ref, set, update, remove, push, onValue, query, orderByChild, limitToLast, limitToFirst, startAt, endAt, onDisconnect, serverTimestamp, get, onChildAdded } = dbM;
 
   const app = appM.initializeApp(cfg);
   const auth = authM.getAuth(app);
@@ -81,15 +81,46 @@ async function firebaseNet(cfg, onStatus){
     chat: {
       send({ nick, col, text }){ return push(ref(db, 'chat'), { uid, nick, col, text, t: serverTimestamp() }); },
       subscribe(cb, onErr){
-        onChildAdded(query(ref(db, 'chat'), orderByChild('t'), limitToLast(15)), s => cb({ id: s.key, ...s.val() }), permErr('chat', onErr));
+        // 최근 30분 안의 대화만 불러와요
+        onChildAdded(query(ref(db, 'chat'), orderByChild('t'), startAt(serverNow() - CHAT_TTL), limitToLast(15)), s => cb({ id: s.key, ...s.val() }), permErr('chat', onErr));
+        // 접속해 있는 동안 3분마다 30분 지난 대화를 서버에서 지워요 (무료 요금제엔 서버 청소 기능이 없어서 접속자가 대신 청소)
+        const sweep = () => get(query(ref(db, 'chat'), orderByChild('t'), endAt(serverNow() - CHAT_TTL), limitToFirst(100)))
+          .then(s => { const jobs = []; s.forEach(c => { jobs.push(remove(c.ref).catch(() => {})); }); return Promise.all(jobs); })
+          .catch(e => console.warn('[cloud-heaven] 오래된 대화 청소 실패', e));
+        setTimeout(sweep, 5000); setInterval(sweep, 3 * 60 * 1000);
       }
     },
+    // 방명록: 글(text)과 그림(draw)을 함께 남길 수 있어요. 그림은 gbimages에 따로 저장
     guestbook: {
-      add({ nick, col, text }){ return push(ref(db, 'guestbook'), { uid, nick, col, text, t: serverTimestamp() }); },
+      async add({ nick, col, text }, drawing){
+        const r = push(ref(db, 'guestbook'));
+        if (drawing) await set(ref(db, 'gbimages/' + r.key), { uid, data: drawing });   // 그림 먼저
+        await set(r, { uid, nick, col, text, draw: !!drawing, t: serverTimestamp() });
+      },
+      async remove(id){
+        await remove(ref(db, 'guestbook/' + id));
+        await remove(ref(db, 'gbimages/' + id)).catch(() => {});
+      },
+      image: cachedImage(id => get(ref(db, `gbimages/${id}/data`)).then(s => s.val())),
       subscribe(cb, onErr){
         onValue(query(ref(db, 'guestbook'), orderByChild('t'), limitToLast(80)), s => {
           const list = []; s.forEach(c => { list.push({ id: c.key, ...c.val() }); }); cb(list.reverse());
         }, permErr('guestbook', onErr));
+      }
+    },
+    // 소원 트리: 오너먼트에 적은 소원 (글 40자, 오너먼트 색 번호)
+    wishes: {
+      async add({ nick, col, text, orn }, drawing){
+        const r = push(ref(db, 'wishes'));
+        if (drawing) await set(ref(db, 'wishimg/' + r.key), { uid, data: drawing });   // 오너먼트 그림 먼저
+        await set(r, { uid, nick, col, text, orn, draw: !!drawing, t: serverTimestamp() });
+      },
+      async remove(id){ await remove(ref(db, 'wishes/' + id)); await remove(ref(db, 'wishimg/' + id)).catch(() => {}); },
+      image: cachedImage(id => get(ref(db, `wishimg/${id}/data`)).then(s => s.val())),
+      subscribe(cb, onErr){
+        onValue(query(ref(db, 'wishes'), orderByChild('t'), limitToLast(60)), s => {
+          const list = []; s.forEach(c => { list.push({ id: c.key, ...c.val() }); }); cb(list.reverse());
+        }, permErr('wishes', onErr));
       }
     },
     items: {
@@ -195,8 +226,29 @@ async function artifactNet(onStatus){
       subscribe(cb){ chatSubs.push(cb); }
     },
     guestbook: {
-      add({ nick, col, text }){ return db ? db.collection('guestbook').add({ uid, nick, col, text, t: Date.now() }) : noDb(); },
+      async add({ nick, col, text }, drawing){
+        if (!db) throw new Error('no-db');
+        const r = db.collection('guestbook').doc();
+        if (drawing) await db.doc('gbimages/' + r.id).set({ uid, data: drawing });
+        await r.set({ uid, nick, col, text, draw: !!drawing, t: Date.now() });
+      },
+      async remove(id){
+        if (!db) throw new Error('no-db');
+        await db.doc('guestbook/' + id).delete(); await db.doc('gbimages/' + id).delete().catch(() => {});
+      },
+      image: cachedImage(async id => { if (!db) return null; const s = await db.doc('gbimages/' + id).get(); return s.exists ? s.data().data : null; }),
       subscribe(cb, onErr){ if (!db) return setTimeout(() => cb([]), 0); coll('guestbook', 80).onSnapshot(s => cb(snapList(s)), onErr); }
+    },
+    wishes: {
+      async add({ nick, col, text, orn }, drawing){
+        if (!db) throw new Error('no-db');
+        const r = db.collection('wishes').doc();
+        if (drawing) await db.doc('wishimg/' + r.id).set({ uid, data: drawing });
+        await r.set({ uid, nick, col, text, orn, draw: !!drawing, t: Date.now() });
+      },
+      async remove(id){ if (!db) throw new Error('no-db'); await db.doc('wishes/' + id).delete(); await db.doc('wishimg/' + id).delete().catch(() => {}); },
+      image: cachedImage(async id => { if (!db) return null; const s = await db.doc('wishimg/' + id).get(); return s.exists ? s.data().data : null; }),
+      subscribe(cb, onErr){ if (!db) return setTimeout(() => cb([]), 0); coll('wishes', 60).onSnapshot(s => cb(snapList(s)), onErr); }
     },
     items: {
       async add(meta, img){
@@ -258,8 +310,8 @@ async function artifactNet(onStatus){
 // 서버 없이 이 창 안에서만 동작 (새로고침하면 사라짐)
 function soloNet(reason){
   const uid = 'solo';
-  const subs = { chat: [], guestbook: [], items: [], votes: [], comments: [] };
-  const data = { guestbook: [], items: [], images: new Map(), votes: {}, comments: {} };
+  const subs = { chat: [], guestbook: [], wishes: [], items: [], votes: [], comments: [] };
+  const data = { guestbook: [], wishes: [], items: [], images: new Map(), votes: {}, comments: {} };
   const fire = k => subs[k].forEach(f => f(k === 'votes' || k === 'comments' ? data[k] : data[k].slice().reverse()));
   let n = 0; const id = () => 'l' + Date.now().toString(36) + (n++);
   return {
@@ -270,8 +322,16 @@ function soloNet(reason){
       subscribe(cb){ subs.chat.push(cb); }
     },
     guestbook: {
-      add(m){ data.guestbook.push({ id: id(), uid, ...m, t: Date.now() }); fire('guestbook'); return Promise.resolve(); },
+      add(m, drawing){ const k = id(); if (drawing) data.images.set('gb:' + k, drawing); data.guestbook.push({ id: k, uid, ...m, draw: !!drawing, t: Date.now() }); fire('guestbook'); return Promise.resolve(); },
+      remove(k){ data.guestbook = data.guestbook.filter(g => g.id !== k); data.images.delete('gb:' + k); fire('guestbook'); return Promise.resolve(); },
+      image: k => Promise.resolve(data.images.get('gb:' + k) || null),
       subscribe(cb){ subs.guestbook.push(cb); setTimeout(() => fire('guestbook'), 0); }
+    },
+    wishes: {
+      add(m, drawing){ const k = id(); if (drawing) data.images.set('wi:' + k, drawing); data.wishes.push({ id: k, uid, ...m, draw: !!drawing, t: Date.now() }); fire('wishes'); return Promise.resolve(); },
+      remove(k){ data.wishes = data.wishes.filter(w => w.id !== k); data.images.delete('wi:' + k); fire('wishes'); return Promise.resolve(); },
+      image: k => Promise.resolve(data.images.get('wi:' + k) || null),
+      subscribe(cb){ subs.wishes.push(cb); setTimeout(() => fire('wishes'), 0); }
     },
     items: {
       add(meta, img){ const k = id(); data.images.set(k, img); data.items.push({ id: k, ...meta, uid, t: Date.now() }); fire('items'); return Promise.resolve(k); },
