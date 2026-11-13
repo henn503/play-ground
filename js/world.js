@@ -710,7 +710,8 @@ export function createWorld(container){
     // 반짝이 전구 줄 (나선)
     const BULB = [0xff8fb1, 0xffe08a, 0x9ad5ff, 0xc8a8ff, 0xa8f0c0].map(c => new THREE.Color(c));
     const NB = 44, bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), NB);
-    const o = new THREE.Object3D(), coneR = y => y < 0.6 ? 0 : y > 5.45 ? 0 : (y < 2.6 ? 2.3 * (2.6 - y) / 2.0 : y < 3.65 ? 1.85 * (3.65 - y) / 1.8 : y < 4.6 ? 1.4 * (4.6 - y) / 1.6 : 0.95 * (5.45 - y) / 1.4);
+    // 높이 y에서 트리의 바깥 반지름 (단이 겹치는 곳은 더 넓은 단 기준)
+    const o = new THREE.Object3D(), coneR = y => { let r = 0; for (const [R, h, c] of TIERS) if (y >= c - h / 2 && y <= c + h / 2) r = Math.max(r, R * (c + h / 2 - y) / h); return r; };
     for (let i = 0; i < NB; i++) {
       const k = i / NB, y = 0.9 + k * 4.3, a = k * Math.PI * 2 * 4.2, r = coneR(y) * 0.98 + 0.04;
       o.position.set(Math.cos(a) * r, y, Math.sin(a) * r); o.updateMatrix(); bulbs.setMatrixAt(i, o.matrix); bulbs.setColorAt(i, BULB[i % BULB.length]);
@@ -719,12 +720,14 @@ export function createWorld(container){
     // 소원 오너먼트 자리 (최근 소원 24개). 오너먼트 그림은 main이 카메라를 향한 카드로 달아요
     const NO = 24, ORN_HEX = ['#f2667f', '#f5c542', '#f79cc5', '#6fb6f2', '#a98be8', '#7fd6a6'];
     const cy = Math.cos(g.rotation.y), sy = Math.sin(g.rotation.y);
-    XMAS.slots = [];
-    for (let i = 0; i < NO; i++) {
-      const k = (i * 0.61803 + 0.1) % 1, y = 1.15 + k * 3.6, a = i * 2.39996, r = coneR(y) + 0.22;
-      const lx = Math.cos(a) * r, lz = Math.sin(a) * r;
-      XMAS.slots.push(new THREE.Vector3(XMAS.x + lx * cy + lz * sy, y, XMAS.z - lx * sy + lz * cy));
-    }
+    // 오너먼트 자리: 층마다 고르게 나눈 뒤, 광장 쪽(앞)에서 잘 보이는 자리부터 채워요
+    const cand = [];
+    [1.25, 1.95, 2.65, 3.35, 4.05, 4.7].forEach((y, row) => {
+      const r = coneR(y) + 0.36, n = Math.max(3, Math.floor(Math.PI * 2 * r / 0.8)), off = (row % 2) * 0.5;
+      for (let m = 0; m < n; m++) { const a = Math.PI / 2 + (m + off) / n * Math.PI * 2; cand.push({ front: Math.sin(a), x: Math.cos(a) * r, y, z: Math.sin(a) * r }); }
+    });
+    cand.sort((p, q) => q.front - p.front);
+    XMAS.slots = cand.slice(0, NO).map(p => new THREE.Vector3(XMAS.x + p.x * cy + p.z * sy, p.y, XMAS.z - p.x * sy + p.z * cy));
     XMAS.ORN_HEX = ORN_HEX;
     // 선물 상자
     const GIFT = [[0xf79cc5, 0xffffff, -1.5, 1.6, 0.7], [0x9ad5ff, 0xffd76a, 1.6, 1.3, 0.6], [0xc8a8ff, 0xf79cc5, 0.4, 2.3, 0.5], [0xffe08a, 0xf2667f, -0.6, -2.2, 0.55]];
